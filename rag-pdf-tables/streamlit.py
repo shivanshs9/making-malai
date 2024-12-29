@@ -6,6 +6,7 @@ import pandasai as pdai
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.chat_models import ChatPerplexity
+from pandasai.chat.response.response_types import Base
 from pandasai_langchain import LangchainLLM
 
 load_dotenv()
@@ -40,6 +41,8 @@ def get_smart_agent():
     for data_name, meta in dataset_metadata.items():
         data_path = os.path.join(dataset_folder, f"{data_name}.parquet")
         df = pd.read_parquet(data_path)
+        # Remove last row as it contains total (really skewes the data)
+        df.drop(df.tail(1).index, inplace=True)
         datalake.append(
             pdai.DataFrame(df, name=data_name, description=meta["description"])
         )
@@ -76,10 +79,18 @@ def main():
                     answer = agent.chat(prompt)
                 else:
                     answer = agent.follow_up(prompt)
-                st.write(answer)
+                json_answer = {"type": "string", "value": answer}
+                if isinstance(answer, Base):
+                    json_answer = answer.to_dict()
+                markdown_answer = json_answer["value"]
+                if json_answer["type"] == "plot":
+                    markdown_answer = f"![plot]({json_answer['value']})"
+                    st.image(json_answer["value"], use_container_width=True)
+                else:
+                    st.write(markdown_answer)
                 agent.add_message(answer, is_user=False)
                 st.session_state.messages.append(
-                    {"role": "assistant", "content": answer}
+                    {"role": "assistant", "content": markdown_answer}
                 )
             except Exception as e:
                 logger.error("Agent failed to answer", exc_info=True)
