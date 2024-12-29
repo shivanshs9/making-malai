@@ -7,7 +7,7 @@ import pdfplumber
 args = sys.argv[1:]
 
 if len(args) < 2:  # Check if the user has provided the required arguments
-    print('Usage: python main.py <pdf_file_path> <output_folder>')
+    print('Usage: python table_to_json.py <pdf_file_path> <output_folder>')
     sys.exit(1)
 
 def get_col(rows, col):
@@ -48,7 +48,6 @@ def main():
     with pdfplumber.open(fpath) as pdf:
         for page in pdf.pages:
             table = page.extract_table()
-            repr_data = {}
             if table is not None:
                 print(f'Page {page.page_number} has a table')
                 print(table[:3])
